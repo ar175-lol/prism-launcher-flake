@@ -5,4 +5,4 @@
 2. Custom jdks
 
 > [!WARNING]
-> This is personal project. This won't be updated in a feature.
+> This is personal project. This won't be updated in a future.
