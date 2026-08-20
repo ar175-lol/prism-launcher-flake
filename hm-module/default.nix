@@ -10,7 +10,7 @@ with lib; let
 
   basePackage =
     if cfg.offline.enable
-    then self.packages.${pkgs.system}.stable
+    then self.packages.${pkgs.stdenv.hostPlatform.system}.stable
     else pkgs.prismlauncher;
 
   prismPackage = basePackage.override {
