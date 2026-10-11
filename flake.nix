@@ -6,24 +6,31 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    flake-utils,
-  }: let
-    supportedSystems = ["x86_64-linux" "aarch64-linux"];
-  in
+  outputs =
+    {
+      nixpkgs,
+      flake-utils,
+    }:
+    let
+      supportedSystems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
+    in
     (flake-utils.lib.eachSystem supportedSystems (
-      system: let
-        pkgs = import nixpkgs {inherit system;};
-      in {
+      system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+      in
+      {
         packages.default = pkgs.prismlauncher;
       }
     ))
     // {
-      homeModules.default = _: {
-        imports = [./hm-module];
-        _module.args = {inherit self;};
-      };
+      homeModules.default =
+        _:
+        {
+          imports = [ ./hm-module ];
+        };
     };
 }
