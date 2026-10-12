@@ -9,6 +9,7 @@
   outputs =
     {
       nixpkgs,
+      self,
       flake-utils,
     }:
     let
