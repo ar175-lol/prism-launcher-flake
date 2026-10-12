@@ -12,30 +12,52 @@ let
   # a real argument to the package and changing it changes the derivation.
   prismPackage = cfg.package.override { inherit (cfg) jdks; };
 
-  # Minecraft's offline-mode UUID: MD5("OfflinePlayer:<name>") with the
-  # version-3 and IETF-variant bits set, dashes stripped. Matches
+  # Minecraft's offline-mode UUID is MD5("OfflinePlayer:<name>"), formatted as
+  # a UUID. That only rewrites two of the digest's 32 hex characters: the
+  # version nibble (character 12, forced to "3") and the variant nibble
+  # (character 16, forced to 8-b), so we patch those characters in place
+  # rather than unpacking the digest into bytes. Matches
   # MinecraftAccount::createOffline() upstream, which also sets
   # ygg.extra.userName = the username.
   hexChars = [
     "0" "1" "2" "3" "4" "5" "6" "7" "8" "9" "a" "b" "c" "d" "e" "f"
   ];
-  hexToInt = c: findFirstIndex (x: x == c) hexChars;
-  intToHex = n: (lib.nth (n / 16) hexChars) + (lib.nth (n % 16) hexChars);
+  hexVals = {
+    "0" = 0;
+    "1" = 1;
+    "2" = 2;
+    "3" = 3;
+    "4" = 4;
+    "5" = 5;
+    "6" = 6;
+    "7" = 7;
+    "8" = 8;
+    "9" = 9;
+    "a" = 10;
+    "b" = 11;
+    "c" = 12;
+    "d" = 13;
+    "e" = 14;
+    "f" = 15;
+  };
+  mod = a: b: a - (a / b) * b;
   mkOfflineId =
     name:
     let
       hash = builtins.hashString "md5" "OfflinePlayer:${name}";
-      pair = s: (hexToInt (substring 0 1 s)) * 16 + (hexToInt (substring 1 1 s));
-      bytes = lib.map pair (lib.splitFixed 2 hash);
-      at = i: lib.nth i bytes;
-      patched =
-        (lib.genList at 0 6) # bytes 0-5
-        ++ [ (at 6 % 16) + 48 ] # byte 6: force version 3
-        ++ [ at 7 ] # byte 7: untouched
-        ++ [ (at 8 % 64) + 128 ] # byte 8: force IETF variant
-        ++ (lib.genList at 9 7); # bytes 9-15
+      # variant = 0b10xx, i.e. the low two bits of the original nibble
+      variant = i: builtins.elemAt hexChars (8 + mod (hexVals.${substring i 1 hash}) 4);
     in
-    lib.concatStringsSep "" (lib.map intToHex patched);
+    substring 0 8 hash
+    + "-"
+    + substring 8 4 hash
+    + "-3"
+    + substring 13 3 hash
+    + "-"
+    + variant 16
+    + substring 17 3 hash
+    + "-"
+    + substring 20 12 hash;
 
   mkAccount =
     username:
